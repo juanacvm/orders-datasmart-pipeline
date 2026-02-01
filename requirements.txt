@@ -1,6 +1,6 @@
 pandas
 sqlalchemy
-logging
 numpy
 chardet
-psycopg2
+psycopg
+python-dotenv
