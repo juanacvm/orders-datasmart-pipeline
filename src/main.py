@@ -17,17 +17,15 @@ def run_pipeline():
     log.info('Iniciando pipeline de Data Mart de Ventas en una Pizzeria...')
     try:
         
-
-
+        #Seccion 1: Crea modelo de datos en Postgresql
         log.info('Eliminado tablas existentes...')
         Base.metadata.drop_all(engine)
 
-        
         log.info('Creando tablas dimensionales y hechos...')
         Base.metadata.create_all(engine)
 
-        
-        log.info('Extrayendo datos de ordenes...')
+        #Seccion 2: Trae datos crudos de la carpeta data (lee archivos CSV)
+        log.info('Extrayendo datos de pedidos...')
         raw_orders = get_orders_data()
 
         log.info('Extrayendo datos de detalle de las ordenes...')
@@ -39,7 +37,8 @@ def run_pipeline():
         log.info('Extrayendo datos de categoria de pizza...')
         raw_pizza_details = get_pizza_types_data()
 
-        log.info('Creando tabla dimensional de fecha...')
+        #Seccion 3: Transforma los datos crudos en 3 tablas dimensionales y 1 de hechos
+        log.info('Creando la tabla dimensional de fecha...')
         dimDate = transform_dimensional_date_table(raw_orders)
 
         log.info('Creando tabla dimensional de horas...')
@@ -54,16 +53,17 @@ def run_pipeline():
         log.info('Optimizando tabla dimensional de pizza...')
         dimPizza = standarize_dimensional_pizza_table(dimPizza)
 
+        #Sección 4: Crea los datos procesados en sus respectivas tablas dimensionales
         log.info('Creando tabla dimensional (fecha) en Postgresql...')
         dimDate.to_sql(name='dim_date', con=engine, if_exists='append', index=False)
 
         log.info('Creando tabla dimensional (hora) en Postgresql...')
         dimTime.to_sql(name='dim_time', con=engine, if_exists='append', index=False)
 
-        
         log.info('Creando tabla dimensional (pizza) en Postgresql...')
         dimPizza.to_sql(name='dim_pizza', con=engine, if_exists='append', index=False)
         
+        #Seccion 5: Carga los datos en la tabla de hechos
         log.info('Creando tabla de hechos (ventas) en Postgresql...')
         factSales.to_sql(name='fact_sales', con=engine, if_exists='append', index=False)
         

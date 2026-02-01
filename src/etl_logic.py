@@ -3,12 +3,14 @@ import numpy as np
 import chardet
 import os
 
+#Metodo que lee el formato de los archivos CSV y los devuelve procesados
 def smart_read_csv(file_path) -> pd.DataFrame:
     with open(file_path,'rb') as f:
         res = chardet.detect(f.read(1000))
 
     return pd.read_csv(file_path, encoding=res['encoding'], encoding_errors='replace')
 
+#Metodo que busca el archivo order.csv y los envia a leer al metodo smart_read_csv
 def get_orders_data() -> pd.DataFrame:
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__)) #busca la direccion actual del script main
@@ -18,6 +20,7 @@ def get_orders_data() -> pd.DataFrame:
     except FileNotFoundError as e:
         print(f"Error en extraer los datos de las ordenes: {e}")
 
+#Metodo que busca el archivo order_details.csv y los envia a leer al metodo smart_read_csv
 def get_order_details_data() -> pd.DataFrame:
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__)) #busca la direccion actual del script main
@@ -27,6 +30,7 @@ def get_order_details_data() -> pd.DataFrame:
     except FileNotFoundError as e:
         print(f"Error en extraer los datos del detalle de las ordenes: {e}")
 
+#Metodo que busca el archivo pizzas.csv y los envia a leer al metodo smart_read_csv
 def get_pizzas_data() -> pd.DataFrame:
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__)) 
@@ -36,6 +40,7 @@ def get_pizzas_data() -> pd.DataFrame:
     except FileNotFoundError as e:
         print(f"Error en extraer los datos de pizza: {e}")
 
+#Metodo que busca el archivo pizza_types.csv y los envia a leer al metodo smart_read_csv
 def get_pizza_types_data() -> pd.DataFrame:
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -45,6 +50,7 @@ def get_pizza_types_data() -> pd.DataFrame:
     except FileNotFoundError as e:
         print(f"Error en leer los datos relacionados al tipo de pizza: {e}")
 
+#Metodo que crea un DataFrame dimensional de fechas en base a la columna de fechas del DataFrame de pedidos
 def transform_dimensional_date_table(raw_orders) -> pd.DataFrame:
     dimDate = pd.to_datetime(raw_orders['date'],errors='coerce').dt.strftime('%Y%m%d').astype(int).to_frame('date_id')
     dimDate = dimDate.drop_duplicates()
@@ -61,6 +67,7 @@ def transform_dimensional_date_table(raw_orders) -> pd.DataFrame:
 
     return dimDate
 
+#Metodo que crea un DataFrame dimensional de horas en base a la columna de horas del DataFrame de pedidos
 def transform_dimensional_hour_table(raw_orders) -> pd.DataFrame:
     dimTime = pd.to_datetime(raw_orders['time'], format='%H:%M:%S', errors='coerce').dt.strftime('%H%M').astype(int).to_frame(name='time_id')
     dimTime = dimTime.drop_duplicates()
@@ -83,6 +90,8 @@ def transform_dimensional_hour_table(raw_orders) -> pd.DataFrame:
 
     return dimTime
 
+#Crea el DF dimensional parcial de pizza en base a la información de pizzas
+#Se deja parcialmente completado el proceso debido a que queda pendiente crea la tabla de hechos de ventas.
 def transform_dimensional_pizza_table(raw_pizzas, raw_pizza_types) -> pd.DataFrame:
     dimPizza = pd.merge(raw_pizzas, raw_pizza_types, how= "left", on = "pizza_type_id")
     dimPizza['id'] = range(1, len(dimPizza) + 1)
@@ -92,6 +101,8 @@ def transform_dimensional_pizza_table(raw_pizzas, raw_pizza_types) -> pd.DataFra
 
     return dimPizza
 
+#Se crea el DF de hechos de ventas a través de las tablas dimensionales
+#Por medio de las llaves id para mantener la misma cantidad de registros
 def transform_fact_sales_table(raw_orders, raw_orders_details, dimDate, dimTime, dimPizza) -> pd.DataFrame:
     factSales = pd.merge(raw_orders, raw_orders_details, how='left', on='order_id')
     factSales['date_id'] = pd.to_datetime(factSales['date'],errors='coerce').dt.strftime('%Y%m%d').astype(int)
@@ -113,6 +124,7 @@ def transform_fact_sales_table(raw_orders, raw_orders_details, dimDate, dimTime,
 
     return factSales
 
+#Metodo que elimina el identificador de la antigua tabla de pizzas y ordena el DF dimensional
 def standarize_dimensional_pizza_table(dimPizza) -> pd.DataFrame:
     dimPizza = dimPizza.drop(
     columns= ['pizza_id']
